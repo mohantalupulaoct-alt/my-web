@@ -3,170 +3,370 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Personal AI</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"/>
+<title>Prompt Generator AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400&family=Syne:wght@500;700;800&display=swap" rel="stylesheet"/>
 <style>
+/* ── reset & root ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#07090e;--surface:#0d1018;--surface2:#13161f;
-  --border:rgba(255,255,255,0.06);--accent:#5effc3;--accent2:#4a7fff;
-  --text:#dde1ec;--muted:#424859;--muted2:#636878;
-  --glow:0 0 60px rgba(94,255,195,0.08);
-  --font-head:'Syne',sans-serif;--font-mono:'DM Mono',monospace;
+  --bg:#06080d;
+  --surface:#0c0f18;
+  --s2:#121520;
+  --s3:#181c27;
+  --border:rgba(255,255,255,0.055);
+  --accent:#c8f135;       /* electric lime — the one color to remember */
+  --accent-dim:rgba(200,241,53,0.12);
+  --accent-glow:rgba(200,241,53,0.08);
+  --blue:#4a8eff;
+  --text:#e2e6f0;
+  --muted:#525a6e;
+  --muted2:#363d50;
+  --danger:#ff5f5f;
+  --serif:'Instrument Serif',serif;
+  --sans:'Syne',sans-serif;
+  --mono:'DM Mono',monospace;
+  --r:12px;
 }
 html,body{height:100%;overflow:hidden}
-body{background:var(--bg);color:var(--text);font-family:var(--font-mono);display:flex;flex-direction:column;cursor:none}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--mono);
+  display:flex;flex-direction:column;
+  cursor:none;
+}
 
-#cur{position:fixed;width:10px;height:10px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen}
-#cur-r{position:fixed;width:32px;height:32px;border:1px solid rgba(94,255,195,.3);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:transform .16s ease,width .18s,height .18s}
+/* ── cursor ── */
+#c{position:fixed;width:8px;height:8px;background:var(--accent);
+   border-radius:50%;pointer-events:none;z-index:9999;
+   transform:translate(-50%,-50%);mix-blend-mode:screen}
+#cr{position:fixed;width:28px;height:28px;
+    border:1px solid rgba(200,241,53,0.35);border-radius:50%;
+    pointer-events:none;z-index:9998;
+    transform:translate(-50%,-50%);
+    transition:width .18s,height .18s,border-color .18s}
 
-.grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(94,255,195,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(94,255,195,.018) 1px,transparent 1px);background-size:52px 52px;pointer-events:none}
-.orb{position:fixed;border-radius:50%;filter:blur(110px);pointer-events:none;z-index:0}
-.o1{width:500px;height:500px;top:-180px;left:-150px;background:rgba(94,255,195,.05)}
-.o2{width:400px;height:400px;bottom:-140px;right:-120px;background:rgba(74,127,255,.06)}
+/* ── noise overlay ── */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity:.4;
+}
 
+/* ── grid bg ── */
+.gbg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(200,241,53,0.015) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(200,241,53,0.015) 1px,transparent 1px);
+  background-size:48px 48px}
+
+/* ── orbs ── */
+.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+.o1{width:600px;height:600px;top:-200px;right:-100px;background:rgba(200,241,53,0.04)}
+.o2{width:450px;height:450px;bottom:-150px;left:-80px;background:rgba(74,142,255,0.05)}
+
+/* ── layout shell ── */
 .shell{position:relative;z-index:1;height:100%;display:flex;flex-direction:column}
 
+/* ── header ── */
 header{
   display:flex;align-items:center;justify-content:space-between;
-  padding:18px 40px;border-bottom:1px solid var(--border);
-  background:rgba(7,9,14,.8);backdrop-filter:blur(20px);flex-shrink:0;
+  padding:16px 40px;border-bottom:1px solid var(--border);
+  background:rgba(6,8,13,0.8);backdrop-filter:blur(20px);
+  flex-shrink:0;
 }
-.logo{font-family:var(--font-head);font-size:1rem;font-weight:800;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
-.logo-pulse{width:7px;height:7px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);animation:pulse 2.2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
-.header-right{display:flex;align-items:center;gap:12px}
-.status-pill{display:flex;align-items:center;gap:6px;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(94,255,195,.18);padding:5px 12px;border-radius:100px;background:rgba(94,255,195,.04)}
-.status-pill::before{content:'';width:5px;height:5px;background:var(--accent);border-radius:50%;box-shadow:0 0 6px var(--accent)}
-.model-tag{font-size:.62rem;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{
+  width:30px;height:30px;border-radius:7px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--sans);font-size:.75rem;font-weight:800;color:#000;
+  letter-spacing:-.02em;
+}
+.logo-text{font-family:var(--sans);font-size:.95rem;font-weight:700;letter-spacing:.01em}
+.logo-text span{color:var(--accent)}
 
-.main{flex:1;display:flex;flex-direction:column;min-height:0;padding:0 40px}
+.header-right{display:flex;align-items:center;gap:16px}
+.badge{
+  font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);border:1px solid rgba(200,241,53,0.2);
+  padding:4px 12px;border-radius:100px;background:rgba(200,241,53,0.05);
+  display:flex;align-items:center;gap:5px;
+}
+.badge::before{content:'';width:5px;height:5px;background:var(--accent);
+  border-radius:50%;box-shadow:0 0 8px var(--accent);
+  animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* empty state */
-.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;animation:fadeUp .7s ease both}
-.empty-state.hidden{display:none}
-.big-label{font-family:var(--font-head);font-size:clamp(2.8rem,7vw,5.5rem);font-weight:800;line-height:.95;letter-spacing:-.03em;text-align:center}
-.big-label .acc{color:var(--accent)}
-.big-label .dim{display:block;font-size:.38em;font-weight:400;color:var(--muted2);font-style:italic;letter-spacing:.01em;margin-top:14px}
-.hint-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:40px}
-.hint{font-size:.7rem;color:var(--muted2);border:1px solid var(--border);padding:6px 14px;border-radius:100px;cursor:pointer;transition:border-color .2s,color .2s}
-.hint:hover{border-color:rgba(94,255,195,.28);color:var(--accent)}
+.btn-clear{
+  font-family:var(--mono);font-size:.7rem;color:var(--muted);
+  background:none;border:1px solid var(--border);padding:5px 14px;
+  border-radius:8px;cursor:pointer;transition:all .2s;
+}
+.btn-clear:hover{border-color:rgba(255,95,95,0.3);color:var(--danger)}
 
-/* conversation */
-.convo{flex:1;overflow-y:auto;padding:28px 0 0;display:flex;flex-direction:column;gap:0;scroll-behavior:smooth}
-.convo::-webkit-scrollbar{width:3px}
-.convo::-webkit-scrollbar-track{background:transparent}
-.convo::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-.convo.hidden{display:none}
+/* ── main ── */
+main{flex:1;display:flex;flex-direction:column;min-height:0;padding:0 40px}
 
-.turn{display:grid;grid-template-columns:28px 1fr;gap:0 16px;padding:20px 0;border-bottom:1px solid var(--border);animation:msgIn .3s ease both}
-.turn:last-child{border-bottom:none}
-@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ── response area ── */
+.response-area{
+  flex:1;overflow-y:auto;padding:32px 0;
+  display:flex;flex-direction:column;gap:24px;
+  scroll-behavior:smooth;
+}
+.response-area::-webkit-scrollbar{width:3px}
+.response-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-.turn-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-family:var(--font-head);font-weight:800;flex-shrink:0;margin-top:2px}
-.turn.user .turn-icon{background:var(--surface2);border:1px solid var(--border);color:var(--muted2)}
-.turn.ai .turn-icon{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}
+/* ── empty state ── */
+.empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:0;animation:fu .6s ease both;
+}
+.empty.hide{display:none}
+.empty-title{
+  font-family:var(--serif);font-size:clamp(2.4rem,6vw,4.8rem);
+  line-height:1;color:var(--text);
+}
+.empty-title em{color:var(--accent);font-style:italic}
+.empty-sub{
+  margin-top:16px;font-size:.78rem;color:var(--muted);
+  line-height:1.8;max-width:420px;
+}
+.example-chips{
+  display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:32px;
+}
+.chip{
+  font-size:.68rem;color:var(--muted);border:1px solid var(--border);
+  padding:7px 16px;border-radius:100px;cursor:pointer;
+  transition:all .2s;background:var(--surface);
+}
+.chip:hover{border-color:rgba(200,241,53,0.3);color:var(--accent);background:var(--accent-dim)}
 
-.turn-role{font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:7px}
-.turn.user .turn-role{color:var(--muted)}
-.turn.ai .turn-role{color:var(--accent)}
+/* ── message cards ── */
+.msg{animation:fu .3s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-.turn-text{font-size:.84rem;line-height:1.8;color:var(--text);word-break:break-word}
-.turn-text code{background:rgba(94,255,195,.08);color:var(--accent);padding:1px 6px;border-radius:4px;font-size:.88em}
-.turn-text strong{color:#fff}
-.turn-text em{color:var(--muted2)}
+/* user message */
+.msg.user{display:flex;justify-content:flex-end}
+.msg.user .bubble{
+  max-width:70%;background:var(--s2);
+  border:1px solid var(--border);border-radius:var(--r);border-bottom-right-radius:3px;
+  padding:14px 18px;
+}
+.msg-label{font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:7px}
+.msg.user .msg-label{color:var(--muted);text-align:right}
+.msg-text{font-size:.84rem;line-height:1.75;color:var(--text)}
 
-.typing{display:flex;align-items:center;gap:5px;padding:4px 0}
-.typing span{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:dot 1.2s infinite ease-in-out}
-.typing span:nth-child(2){animation-delay:.2s}
-.typing span:nth-child(3){animation-delay:.4s}
-@keyframes dot{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+/* ai message */
+.msg.ai .bubble{
+  background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r);border-top-left-radius:3px;
+  padding:0;overflow:hidden;
+  max-width:100%;
+}
+.ai-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;border-bottom:1px solid var(--border);
+  background:var(--s3);
+}
+.ai-label{
+  display:flex;align-items:center;gap:8px;
+  font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+}
+.ai-icon{
+  width:18px;height:18px;border-radius:4px;
+  background:var(--accent);color:#000;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--sans);font-size:.55rem;font-weight:800;
+}
+.ai-actions{display:flex;gap:6px}
+.action-btn{
+  display:flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:.62rem;color:var(--muted);
+  background:none;border:1px solid var(--border);padding:4px 10px;
+  border-radius:6px;cursor:pointer;transition:all .2s;
+}
+.action-btn:hover{border-color:rgba(200,241,53,0.25);color:var(--accent)}
+.action-btn.copied{border-color:rgba(200,241,53,0.3);color:var(--accent)}
+.action-btn svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* input */
-.input-bar{flex-shrink:0;padding:20px 0 28px}
-.input-wrap{display:flex;align-items:flex-end;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 12px 12px 18px;transition:border-color .2s,box-shadow .2s}
-.input-wrap:focus-within{border-color:rgba(94,255,195,.3);box-shadow:0 0 0 3px rgba(94,255,195,.05),var(--glow)}
-textarea{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:.84rem;line-height:1.6;resize:none;min-height:24px;max-height:140px}
+.ai-body{padding:18px 20px}
+.ai-body .msg-text{white-space:pre-wrap}
+.ai-body .msg-text code{
+  background:rgba(200,241,53,0.08);color:var(--accent);
+  padding:2px 6px;border-radius:4px;font-size:.88em;
+}
+.ai-body .msg-text strong{color:#fff}
+
+/* typing */
+.typing-dots{display:flex;gap:4px;padding:4px 0;align-items:center}
+.typing-dots span{
+  width:5px;height:5px;background:var(--accent);border-radius:50%;
+  animation:dot 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,80%,100%{transform:scale(.45);opacity:.25}40%{transform:scale(1);opacity:1}}
+
+/* ── input zone ── */
+.input-zone{flex-shrink:0;padding:16px 0 28px}
+
+/* mode tabs */
+.mode-tabs{display:flex;gap:4px;margin-bottom:12px}
+.tab{
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:5px 14px;border-radius:8px;border:1px solid var(--border);
+  color:var(--muted);background:none;cursor:pointer;transition:all .2s;
+}
+.tab.active{background:var(--accent-dim);border-color:rgba(200,241,53,0.3);color:var(--accent)}
+.tab:hover:not(.active){color:var(--text);border-color:rgba(255,255,255,0.12)}
+
+/* input box */
+.input-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:border-color .2s,box-shadow .2s;
+}
+.input-box:focus-within{
+  border-color:rgba(200,241,53,0.25);
+  box-shadow:0 0 0 3px rgba(200,241,53,0.04),0 0 40px rgba(200,241,53,0.05);
+}
+
+.input-top{display:flex;align-items:flex-start;gap:0}
+textarea{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text);font-family:var(--mono);font-size:.84rem;
+  line-height:1.65;resize:none;padding:16px 18px;
+  min-height:56px;max-height:180px;
+}
 textarea::placeholder{color:var(--muted)}
-.send{width:40px;height:40px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s,box-shadow .15s,opacity .2s}
-.send:hover{transform:scale(1.06);box-shadow:0 0 18px rgba(94,255,195,.4)}
-.send:active{transform:scale(.96)}
-.send:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
-.send svg{width:16px;height:16px}
-.input-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:0 4px}
-.input-meta span{font-size:.62rem;color:var(--muted);letter-spacing:.06em}
 
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(20,6,10,.95);border:1px solid rgba(255,80,100,.3);color:#ff6b7a;font-size:.75rem;padding:10px 20px;border-radius:100px;opacity:0;transition:all .28s ease;pointer-events:none;z-index:1000;white-space:nowrap}
+.send-btn{
+  margin:10px 10px 0 0;
+  width:40px;height:40px;flex-shrink:0;
+  background:var(--accent);border:none;border-radius:9px;
+  color:#000;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .15s,box-shadow .15s,opacity .2s;
+}
+.send-btn:hover{transform:scale(1.07);box-shadow:0 0 20px rgba(200,241,53,0.35)}
+.send-btn:active{transform:scale(.95)}
+.send-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
+.send-btn svg{width:16px;height:16px;stroke:#000;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+.input-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 16px 12px;border-top:1px solid var(--border);
+}
+.input-hint{font-size:.62rem;color:var(--muted);letter-spacing:.06em}
+.char-count{font-size:.62rem;color:var(--muted)}
+.char-count.warn{color:var(--danger)}
+
+/* ── toast ── */
+.toast{
+  position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:rgba(10,14,22,.95);border:1px solid rgba(200,241,53,0.25);
+  color:var(--accent);font-size:.74rem;padding:9px 20px;
+  border-radius:100px;opacity:0;transition:all .25s;
+  pointer-events:none;z-index:1000;white-space:nowrap;
+}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:640px){
-  header{padding:16px 20px}
-  .main{padding:0 20px}
-  .big-label{font-size:2.4rem}
-  .input-bar{padding:16px 0 20px}
+  header{padding:14px 20px}
+  main{padding:0 20px}
+  .input-zone{padding:12px 0 20px}
+  .empty-title{font-size:2.2rem}
 }
 </style>
 </head>
 <body>
-<div id="cur"></div>
-<div id="cur-r"></div>
-<div class="grid"></div>
+
+<div id="c"></div>
+<div id="cr"></div>
+<div class="gbg"></div>
 <div class="orb o1"></div>
 <div class="orb o2"></div>
 <div class="toast" id="toast"></div>
 
 <div class="shell">
+
+  <!-- ── HEADER ── -->
   <header>
     <div class="logo">
-      <div class="logo-pulse"></div>
-      PERSONAL<span style="color:var(--accent)">·AI</span>
+      <div class="logo-mark">PG</div>
+      <div class="logo-text">Prompt<span>Gen</span></div>
     </div>
     <div class="header-right">
-      <div class="model-tag">Ollama · llama3.2</div>
-      <div class="status-pill">Online</div>
+      <div class="badge">AI Ready</div>
+      <button class="btn-clear" onclick="clearAll()">Clear</button>
     </div>
   </header>
 
-  <div class="main">
-    <div class="empty-state" id="emptyState">
-      <div class="big-label">
-        Ask me<br><span class="acc">anything.</span>
-        <span class="dim">your personal ai — always here.</span>
-      </div>
-      <div class="hint-row">
-        <div class="hint" onclick="useHint(this)">Who am I?</div>
-        <div class="hint" onclick="useHint(this)">What am I learning?</div>
-        <div class="hint" onclick="useHint(this)">Explain transformers simply</div>
-        <div class="hint" onclick="useHint(this)">Help me with Python</div>
-      </div>
-    </div>
+  <!-- ── MAIN ── -->
+  <main>
+    <div class="response-area" id="responseArea">
 
-    <div class="convo hidden" id="convo"></div>
+      <!-- Empty state -->
+      <div class="empty" id="emptyState">
+        <div class="empty-title">
+          Generate<br><em>better prompts.</em>
+        </div>
+        <p class="empty-sub">
+          Describe what you need and get a refined, structured prompt
+          ready to use with any AI model — Claude, GPT, Gemini, or your own.
+        </p>
+        <div class="example-chips">
+          <div class="chip" onclick="useChip(this)">Write a prompt for a blog post writer</div>
+          <div class="chip" onclick="useChip(this)">Prompt to summarise long documents</div>
+          <div class="chip" onclick="useChip(this)">Create a coding assistant prompt</div>
+          <div class="chip" onclick="useChip(this)">Prompt for data analysis tasks</div>
+          <div class="chip" onclick="useChip(this)">Customer support AI prompt</div>
+        </div>
+      </div>
 
-    <div class="input-bar">
-      <div class="input-wrap">
-        <textarea id="inp" placeholder="Type your question..." rows="1"></textarea>
-        <button class="send" id="sendBtn" onclick="send()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
+    </div><!-- /response-area -->
+
+    <!-- ── INPUT ZONE ── -->
+    <div class="input-zone">
+
+      <!-- Mode tabs -->
+      <div class="mode-tabs">
+        <button class="tab active" onclick="setMode(this,'generate')">Generate Prompt</button>
+        <button class="tab" onclick="setMode(this,'improve')">Improve Prompt</button>
+        <button class="tab" onclick="setMode(this,'explain')">Explain Prompt</button>
       </div>
-      <div class="input-meta">
-        <span>↵ send &nbsp;·&nbsp; shift+↵ newline</span>
-        <span id="cc">0 / 500</span>
+
+      <!-- Input box -->
+      <div class="input-box">
+        <div class="input-top">
+          <textarea
+            id="userInput"
+            placeholder="Describe what you want the AI to do — e.g. 'I need a prompt for an AI that helps users write professional emails'"
+            rows="2"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" onclick="generate()" title="Generate">
+            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="input-footer">
+          <span class="input-hint" id="modeHint">↵ generate &nbsp;·&nbsp; shift+↵ newline</span>
+          <span class="char-count" id="charCount">0 / 800</span>
+        </div>
       </div>
+
     </div>
-  </div>
+  </main>
 </div>
 
 <script>
+// ── Config ───────────────────────────────────────────────
 const WEBHOOK = 'https://n8n-production-0e435.up.railway.app/webhook/chat';
+// Change to your n8n cloud URL when deployed:
+// const WEBHOOK = 'https://n8n-production-xxxx.up.railway.app/webhook/chat';
 
-// cursor
-const cur=document.getElementById('cur'),curR=document.getElementById('cur-r');
+// ── Cursor ───────────────────────────────────────────────
+const cur=document.getElementById('c'), curR=document.getElementById('cr');
 let mx=0,my=0,rx=0,ry=0;
 document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
 (function tick(){
@@ -175,99 +375,229 @@ document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
   curR.style.left=rx+'px';curR.style.top=ry+'px';
   requestAnimationFrame(tick);
 })();
-document.querySelectorAll('button,.hint,textarea').forEach(el=>{
-  el.addEventListener('mouseenter',()=>{curR.style.width='48px';curR.style.height='48px'});
-  el.addEventListener('mouseleave',()=>{curR.style.width='32px';curR.style.height='32px'});
+document.querySelectorAll('button,.chip,textarea').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{curR.style.width='44px';curR.style.height='44px';curR.style.borderColor='rgba(200,241,53,0.5)'});
+  el.addEventListener('mouseleave',()=>{curR.style.width='28px';curR.style.height='28px';curR.style.borderColor='rgba(200,241,53,0.35)'});
 });
 
-// textarea
-const inp=document.getElementById('inp'),cc=document.getElementById('cc');
-inp.addEventListener('input',()=>{
+// ── Mode ─────────────────────────────────────────────────
+let currentMode = 'generate';
+const modePlaceholders = {
+  generate: "Describe what you want the AI to do — e.g. 'I need a prompt for an AI that helps users write professional emails'",
+  improve:  "Paste your existing prompt here and I'll refine and improve it for better results...",
+  explain:  "Paste any prompt here and I'll break down what it does, how it works, and why each part matters..."
+};
+const modeHints = {
+  generate: "Describe your use case → get a full structured prompt",
+  improve:  "Paste an existing prompt → get an improved version",
+  explain:  "Paste any prompt → get a detailed breakdown"
+};
+
+function setMode(btn, mode) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  currentMode = mode;
+  document.getElementById('userInput').placeholder = modePlaceholders[mode];
+  document.getElementById('modeHint').textContent = modeHints[mode];
+}
+
+// ── Textarea ─────────────────────────────────────────────
+const inp = document.getElementById('userInput');
+const cc  = document.getElementById('charCount');
+inp.addEventListener('input', ()=>{
   inp.style.height='auto';
-  inp.style.height=Math.min(inp.scrollHeight,140)+'px';
-  cc.textContent=inp.value.length+' / 500';
+  inp.style.height=Math.min(inp.scrollHeight,180)+'px';
+  const len = inp.value.length;
+  cc.textContent = len+' / 800';
+  cc.classList.toggle('warn', len > 720);
 });
-inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+inp.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();generate()}
+});
 
-function useHint(el){inp.value=el.textContent;inp.dispatchEvent(new Event('input'));inp.focus()}
-
-// send
-let busy=false;
-async function send(){
-  const q=inp.value.trim();
-  if(!q||busy)return;
-  busy=true;
-
-  document.getElementById('emptyState').classList.add('hidden');
-  document.getElementById('convo').classList.remove('hidden');
-
-  addTurn('user',q);
-  inp.value='';inp.style.height='auto';cc.textContent='0 / 500';
-  document.getElementById('sendBtn').disabled=true;
-
-  const tid=addTyping();
-  try{
-    const res=await fetch(WEBHOOK,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:q})
-    });
-    const raw=await res.text();
-    let ans;
-    try{
-      const d=JSON.parse(raw);
-      const item=Array.isArray(d)?d[0]:d;
-      ans=item.output||item.response||item.text||item.message||item.answer||raw;
-    }catch{ans=raw}
-    removeTyping(tid);
-    addTurn('ai',ans);
-  }catch(err){
-    removeTyping(tid);
-    addTurn('ai','⚠ Could not reach n8n. Make sure the workflow is active.');
-    toast('Connection failed — check n8n is running');
-  }
-  busy=false;
-  document.getElementById('sendBtn').disabled=false;
+function useChip(el){
+  inp.value=el.textContent;
+  inp.dispatchEvent(new Event('input'));
   inp.focus();
 }
 
-function addTurn(role,text){
-  const c=document.getElementById('convo');
-  const d=document.createElement('div');
-  d.className='turn '+role;
-  d.innerHTML=`
-    <div class="turn-icon">${role==='ai'?'P':'M'}</div>
-    <div class="turn-body">
-      <div class="turn-role">${role==='ai'?'Personal AI':'You'}</div>
-      <div class="turn-text">${fmt(text)}</div>
-    </div>`;
-  c.appendChild(d);
-  c.scrollTop=c.scrollHeight;
+// ── System prompts per mode ───────────────────────────────
+const systemPrompts = {
+  generate: `You are an expert world-class Prompt Engineer. When the user describes what they want an AI to do, generate a complete, structured, production-ready prompt for them. Your sole mission is to take the user's raw, basic request and transform it into a highly optimized, hyper-effective "Master Prompt." This generated prompt will be used to instruct another AI to deliver the absolute best possible response.
+
+To build this Master Prompt, you must structurally unpack the user's intent and apply advanced prompt engineering frameworks. 
+
+### YOUR OUTPUT STRUCTURE
+Every response you give must follow this exact template for the generated prompt:
+
+1. **🎭 Role & Persona:** Assign a specific, world-class expert persona to the target AI (e.g., "You are a senior software architect with 20 years of experience...").
+2. **📝 Context & Background:** Explain the 'why' and 'what' behind the request so the AI understands the bigger picture.
+3. **🎯 Task & Objectives:** Clearly define the precise actions the AI must take, broken down into logical steps if necessary.
+4. **🛑 Constraints & Guardrails:** Establish strict rules (e.g., "Do not use jargon," "Keep it under 300 words," "Avoid generic advice").
+5. **✨ Style & Formatting:** Specify the tone (e.g., authoritative, witty, empathetic) and the exact visual layout required (e.g., Markdown headers, bullet points, comparative tables).
+
+### YOUR OPERATIONAL RULES
+- **Be an Enhancer, Not a Copier:** Do not just rephrase the user's input. Deeply analyze what they *actually* need. If they ask for a "workout plan," assume they need considerations for safety, progression, and dietary alignment.
+- **Inject Meta-Instructions:** Include advanced prompt techniques in your output, such as Chain-of-Thought ("Think step-by-step before answering") or Few-Shot examples if applicable.
+- **No Conversational Filler:** Do not say "Sure, here is your prompt!" or "I hope this helps!" Output *only* the final, ready-to-copy Master Prompt inside a clean markdown block.
+4. **🛑 Constraints & Guardrails:** Establish strict rules. Always instruct the target AI to eliminate conversational filler (no "Sure, here is..." or "In conclusion..."). Force it to deliver hyper-technical, direct, and immediate answers without hand-waving or over-explaining basic concepts.. Return ONLY the prompt, no explanation.`,
+  improve:  `You are an expert prompt engineer. When the user gives you an existing prompt, improve it significantly. Make it clearer, more specific, add missing constraints, improve formatting. Show the improved version clearly. Return ONLY the improved prompt with a one-line summary of key changes at the top.`,
+  explain:  `You are an expert prompt engineer. When the user gives you a prompt, break it down clearly: what each section does, why it works, what techniques are used (role assignment, constraints, output formatting, etc.), and what could be improved. Be educational but concise.`
+};
+
+// ── Generate ──────────────────────────────────────────────
+let busy = false;
+
+async function generate() {
+  const q = inp.value.trim();
+  if(!q || busy) return;
+  busy = true;
+
+  // Hide empty state
+  document.getElementById('emptyState').classList.add('hide');
+
+  // Add user message
+  addUser(q);
+  inp.value=''; inp.style.height='auto'; cc.textContent='0 / 800';
+  document.getElementById('sendBtn').disabled = true;
+
+  // Typing indicator
+  const tid = addTyping();
+
+  try {
+    const res = await fetch(WEBHOOK, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message: `[MODE: ${currentMode.toUpperCase()}]\n\n${q}`,
+        systemPrompt: systemPrompts[currentMode]
+      })
+    });
+
+    const raw = await res.text();
+    let answer;
+    try {
+      const d = JSON.parse(raw);
+      const item = Array.isArray(d) ? d[0] : d;
+      answer = item.output||item.response||item.text||item.message||item.answer||raw;
+    } catch { answer = raw; }
+
+    removeTyping(tid);
+    addAI(answer);
+
+  } catch(err) {
+    removeTyping(tid);
+    addAI('⚠ Could not reach the AI backend.\n\nMake sure:\n• n8n is running\n• Workflow is active\n• Webhook URL is correct in the config');
+    showToast('Connection failed — check n8n');
+  }
+
+  busy = false;
+  document.getElementById('sendBtn').disabled = false;
+  inp.focus();
 }
 
-function addTyping(){
-  const c=document.getElementById('convo');
-  const id='ty'+Date.now();
-  const d=document.createElement('div');
-  d.className='turn ai';d.id=id;
-  d.innerHTML=`<div class="turn-icon">P</div><div class="turn-body"><div class="turn-role">Personal AI</div><div class="typing"><span></span><span></span><span></span></div></div>`;
-  c.appendChild(d);c.scrollTop=c.scrollHeight;
+// ── Message helpers ───────────────────────────────────────
+function addUser(text) {
+  const area = document.getElementById('responseArea');
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `
+    <div class="bubble">
+      <div class="msg-label">You · ${currentMode}</div>
+      <div class="msg-text">${esc(text)}</div>
+    </div>`;
+  area.appendChild(d);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addAI(text) {
+  const area = document.getElementById('responseArea');
+  const id = 'ai-'+Date.now();
+  const d = document.createElement('div');
+  d.className = 'msg ai';
+  d.innerHTML = `
+    <div class="bubble">
+      <div class="ai-header">
+        <div class="ai-label">
+          <div class="ai-icon">PG</div>
+          Generated Prompt
+        </div>
+        <div class="ai-actions">
+          <button class="action-btn" onclick="copyMsg('${id}',this)">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+      </div>
+      <div class="ai-body">
+        <div class="msg-text" id="${id}">${fmt(text)}</div>
+      </div>
+    </div>`;
+  area.appendChild(d);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addTyping() {
+  const area = document.getElementById('responseArea');
+  const id = 'ty-'+Date.now();
+  const d = document.createElement('div');
+  d.className = 'msg ai'; d.id = id;
+  d.innerHTML = `
+    <div class="bubble">
+      <div class="ai-header">
+        <div class="ai-label"><div class="ai-icon">PG</div>Generating…</div>
+      </div>
+      <div class="ai-body">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>`;
+  area.appendChild(d);
+  area.scrollTop = area.scrollHeight;
   return id;
 }
-function removeTyping(id){const e=document.getElementById(id);if(e)e.remove()}
 
+function removeTyping(id){ const e=document.getElementById(id); if(e) e.remove(); }
+
+// ── Copy ──────────────────────────────────────────────────
+function copyMsg(id, btn) {
+  const el = document.getElementById(id);
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    showToast('Copied to clipboard ✓');
+    setTimeout(()=>{
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+    }, 2500);
+  });
+}
+
+// ── Clear ─────────────────────────────────────────────────
+function clearAll() {
+  const area = document.getElementById('responseArea');
+  // remove all messages except empty state
+  const msgs = area.querySelectorAll('.msg');
+  msgs.forEach(m=>m.remove());
+  document.getElementById('emptyState').classList.remove('hide');
+  inp.value=''; inp.style.height='auto'; cc.textContent='0 / 800';
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function esc(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
 function fmt(t){
   return t
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
     .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g,'<em>$1</em>')
-    .replace(/`(.*?)`/g,'<code>$1</code>')
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
     .replace(/\n/g,'<br>');
 }
-function toast(msg){
+function showToast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 </script>
 </body>
